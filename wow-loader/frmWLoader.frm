@@ -292,14 +292,18 @@ StartOver:
                         Print #6, Left(FakeWoWPath, 2)
                         Print #6, "cd " & """" & FakeWoWPath & """"
                         Print #6, "start /WAIT WoW.exe"
-                        Print #6, "regedit /S " & """" & App.Path & "\tmp.reg" & """"
-                        Print #6, "del " & """" & App.Path & "\tmp.reg" & """"
+                        If FakeWoWPath <> WoWPath Then
+                            Print #6, "regedit /S " & """" & App.Path & "\tmp.reg" & """"
+                            Print #6, "del " & """" & App.Path & "\tmp.reg" & """"
+                        End If
                         'Print #6, """" & App.Path & "\junction.exe" & """" & " -d " & """" & FakeWoWPath & """"
                         Print #6, "del " & """" & App.Path & "\tmp.bat" & """"
                     Close #6
-                    Open App.Path & "\tmp.reg" For Output As #7
-                        Print #7, "Windows Registry Editor Version 5.00" & vbCrLf & "[HKEY_LOCAL_MACHINE\SOFTWARE\Blizzard Entertainment\World of Warcraft]" & vbCrLf & Replace("""" & "InstallPath" & """" & "=" & """" & WoWPath & "\" & """", "\", "\\")
-                    Close #7
+                    If FakeWoWPath <> WoWPath Then
+                        Open App.Path & "\tmp.reg" For Output As #7
+                            Print #7, "Windows Registry Editor Version 5.00" & vbCrLf & "[HKEY_LOCAL_MACHINE\SOFTWARE\Blizzard Entertainment\World of Warcraft]" & vbCrLf & Replace("""" & "InstallPath" & """" & "=" & """" & WoWPath & "\" & """", "\", "\\")
+                        Close #7
+                    End If
                     Shell App.Path & "\tmp.bat", vbHide
                 Else
                     Err.Raise 53
@@ -366,14 +370,18 @@ StartOver:
                             Print #6, Left(FakeWoWPath, 2)
                             Print #6, "cd " & """" & FakeWoWPath & """"
                             Print #6, "start /WAIT WoW.exe"
-                            Print #6, "regedit /S " & """" & App.Path & "\tmp.reg" & """"
-                            Print #6, "del " & """" & App.Path & "\tmp.reg" & """"
+                            If FakeWoWPath <> WoWPath Then
+                                Print #6, "regedit /S " & """" & App.Path & "\tmp.reg" & """"
+                                Print #6, "del " & """" & App.Path & "\tmp.reg" & """"
+                            End If
                             'Print #6, """" & App.Path & "\junction.exe" & """" & " -d " & """" & FakeWoWPath & """"
                             Print #6, "del " & """" & App.Path & "\tmp.bat" & """"
                         Close #6
-                        Open App.Path & "\tmp.reg" For Output As #7
-                            Print #7, "Windows Registry Editor Version 5.00" & vbCrLf & "[HKEY_LOCAL_MACHINE\SOFTWARE\Blizzard Entertainment\World of Warcraft]" & vbCrLf & Replace("""" & "InstallPath" & """" & "=" & """" & WoWPath & "\" & """", "\", "\\")
-                        Close #7
+                        If FakeWoWPath <> WoWPath Then
+                            Open App.Path & "\tmp.reg" For Output As #7
+                                Print #7, "Windows Registry Editor Version 5.00" & vbCrLf & "[HKEY_LOCAL_MACHINE\SOFTWARE\Blizzard Entertainment\World of Warcraft]" & vbCrLf & Replace("""" & "InstallPath" & """" & "=" & """" & WoWPath & "\" & """", "\", "\\")
+                            Close #7
+                        End If
                         Shell App.Path & "\tmp.bat", vbHide
                     Else
                         Err.Raise 53
