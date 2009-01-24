@@ -1,0 +1,13 @@
+• 1.0.0 Initial Release.
+• 1.0.1 Added version number system.
+• 1.0.2 Added fields for Website & Register URLs.
+• 1.0.3 Added buttons for viewing website URLs.
+• 1.0.4 Changed launching code to use ShellExecute rather than just Shell and made it so you can pick between Launcher.exe and WoW.exe.
+• 1.0.5 Added support for loading the game from otuside of the game directory.
+• 1.0.6 ???
+• 1.0.7 ???
+• 1.0.8 ???
+• 1.0.9 Fixed a crash when you tried to add a server with just a name or address by making it so a blank name is automatically set to a server address and an empty server address results in error.
+• 1.0.10 Added support for Lich King by updating the new realmlist file.
+• 1.0.11 God i'm an idiot, fixed a typo that completely broke the launcher.
+• 1.0.12 Added XFire support to the launcher so you can track hours and have in-game working (via SysInterals junction.exe)
