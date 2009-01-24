@@ -294,7 +294,7 @@ StartOver:
                         Print #6, "start /WAIT WoW.exe"
                         Print #6, "regedit /S " & """" & App.Path & "\tmp.reg" & """"
                         Print #6, "del " & """" & App.Path & "\tmp.reg" & """"
-                        Print #6, """" & App.Path & "\junction.exe" & """" & " -d " & """" & FakeWoWPath & """"
+                        'Print #6, """" & App.Path & "\junction.exe" & """" & " -d " & """" & FakeWoWPath & """"
                         Print #6, "del " & """" & App.Path & "\tmp.bat" & """"
                     Close #6
                     Open App.Path & "\tmp.reg" For Output As #7
@@ -368,7 +368,7 @@ StartOver:
                             Print #6, "start /WAIT WoW.exe"
                             Print #6, "regedit /S " & """" & App.Path & "\tmp.reg" & """"
                             Print #6, "del " & """" & App.Path & "\tmp.reg" & """"
-                            Print #6, """" & App.Path & "\junction.exe" & """" & " -d " & """" & FakeWoWPath & """"
+                            'Print #6, """" & App.Path & "\junction.exe" & """" & " -d " & """" & FakeWoWPath & """"
                             Print #6, "del " & """" & App.Path & "\tmp.bat" & """"
                         Close #6
                         Open App.Path & "\tmp.reg" For Output As #7

@@ -11,4 +11,5 @@
 • 1.0.10 Added support for Lich King by updating the new realmlist file.
 • 1.0.11 God i'm an idiot, fixed a typo that completely broke the launcher.
 • 1.0.12 Added XFire support to the launcher so you can track hours and have in-game working (via SysInterals junction.exe)
-• 1.0.13 Launcher.exe support removed from custom servers (don't want it updating your WoW anyway), now only affects launching official WoW
+• 1.0.13 Launcher.exe support removed from custom servers (don't want it updating your WoW anyway), now only affects launching official WoW.
+• 1.0.14 Automatic removal of junction is gone for now as XFire will forget where your game is if it can't find the folder anymore.
