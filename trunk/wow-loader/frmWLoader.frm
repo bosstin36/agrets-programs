@@ -258,6 +258,7 @@ End Sub
 Private Sub cmdLaunchCustom_Click()
     Dim ErrorHandled As Boolean
     Dim WoWPath As String
+    Dim FakeWoWPath As String
     On Error GoTo errorhandle
     ErrorHandled = False
     WoWPath = App.Path
@@ -269,19 +270,44 @@ Private Sub cmdLaunchCustom_Click()
         Question = MsgBox("Launch WoW Custom?" & vbNewLine & "-----------------" & vbNewLine & "Server Info:" & vbNewLine & "-----------------" & vbNewLine & "Name: " & Replace(ServerInfo(0), vbTab, "") & vbNewLine & "Address: " & ServerInfo(1), vbYesNo)
         If Question = 6 Then
 StartOver:
-            Open WoWPath & "\realmlist.wtf" For Output As #4
-                Print #4, "set realmlist " & ServerInfo(1)
-            Close #4
+            If FileExists(WoWPath & "\realmlist.wtf") Then
+                Open WoWPath & "\realmlist.wtf" For Output As #4
+                    Print #4, "set realmlist " & ServerInfo(1)
+                Close #4
+            End If
+
+            If FileExists(WoWPath & "\Data\enUS\realmlist.wtf") Then
+                Open WoWPath & "\Data\enUS\realmlist.wtf" For Output As #5
+                    Print #5, "set realmlist " & ServerInfo(1)
+                Close #5
+            End If
             
-            Open WoWPath & "\Data\enUS\realmlist.wtf" For Output As #5
-                Print #5, "set realmlist " & ServerInfo(1)
-            Close #5
-            
-            If optLauncher.Value = True Then
-                Shell WoWPath & "\Launcher.exe", vbNormalFocus
-            Else
+            ' XFire Check
+            If GetSetting("WoW Loader", "Pref", "UseXFire") = "True" Then
+                FakeWoWPath = GetSetting("WoW Loader", "Pref", "XFireFakeFolder")
+                
+                If FileExists(WoWPath & "\WoW.exe") Then
+                    Open App.Path & "\tmp.bat" For Output As #6
+                        Print #6, """" & App.Path & "\junction.exe" & """" & " " & """" & FakeWoWPath & """" & " " & """" & WoWPath & """"
+                        Print #6, Left(FakeWoWPath, 2)
+                        Print #6, "cd " & """" & FakeWoWPath & """"
+                        Print #6, "start /WAIT WoW.exe"
+                        Print #6, "regedit /S " & """" & App.Path & "\tmp.reg" & """"
+                        Print #6, "del " & """" & App.Path & "\tmp.reg" & """"
+                        Print #6, """" & App.Path & "\junction.exe" & """" & " -d " & """" & FakeWoWPath & """"
+                        Print #6, "del " & """" & App.Path & "\tmp.bat" & """"
+                    Close #6
+                    Open App.Path & "\tmp.reg" For Output As #7
+                        Print #7, "Windows Registry Editor Version 5.00" & vbCrLf & "[HKEY_LOCAL_MACHINE\SOFTWARE\Blizzard Entertainment\World of Warcraft]" & vbCrLf & Replace("""" & "InstallPath" & """" & "=" & """" & WoWPath & "\" & """", "\", "\\")
+                    Close #7
+                    Shell App.Path & "\tmp.bat", vbHide
+                Else
+                    Err.Raise 53
+                End If
+            Else ' No XFire Support, Use Classic Launch Method
                 Shell WoWPath & "\WoW.exe", vbNormalFocus
             End If
+            
         End If
     End If
     Exit Sub
@@ -309,22 +335,56 @@ Private Sub cmdLaunchOfficial_Click()
     Question = MsgBox("Launch WoW Official?", vbYesNo)
     If Question = 6 Then
 StartOver:
-            Open WoWPath & "\realmlist.wtf" For Output As #4
-                Print #4, "set realmlist us.logon.worldofwarcraft.com"
-                Print #4, "set patchlist us.version.worldofwarcraft.com"
-            Close #4
+            If FileExists(WoWPath & "\realmlist.wtf") Then
+                Open WoWPath & "\realmlist.wtf" For Output As #4
+                    Print #4, "set realmlist us.logon.worldofwarcraft.com"
+                    Print #4, "set patchlist us.version.worldofwarcraft.com"
+                Close #4
+            End If
             
-            Open WoWPath & "\Data\enUS\realmlist.wtf" For Output As #5
-                Print #5, "set realmlist us.logon.worldofwarcraft.com"
-                Print #5, "set patchlist us.version.worldofwarcraft.com"
-                Print #5, "set realmlistbn " & """" & """"""
-                Print #5, "set portal " & """" & "us" & """"
-            Close #5
+            If FileExists(WoWPath & "\Data\enUS\realmlist.wtf") Then
+                Open WoWPath & "\Data\enUS\realmlist.wtf" For Output As #5
+                    Print #5, "set realmlist us.logon.worldofwarcraft.com"
+                    Print #5, "set patchlist us.version.worldofwarcraft.com"
+                    Print #5, "set realmlistbn " & """" & """"""
+                    Print #5, "set portal " & """" & "us" & """"
+                Close #5
+            End If
             
-            If optLauncher.Value = True Then
-                Shell WoWPath & "\Launcher.exe", vbNormalFocus
-            Else
-                Shell WoWPath & "\WoW.exe", vbNormalFocus
+            
+            ' XFire Check
+            If GetSetting("WoW Loader", "Pref", "UseXFire") = "True" Then
+                FakeWoWPath = GetSetting("WoW Loader", "Pref", "XFireFakeFolder")
+                
+                If optLauncher.Value = True Then
+                    MsgBox "You may not use XFire detection mode and launcher at the same time." & vbNewLine & "Launching without XFire support", vbInformation, "Oh No!!"
+                    Shell WoWPath & "\Launcher.exe", vbNormalFocus
+                Else
+                    If FileExists(WoWPath & "\WoW.exe") Then
+                        Open App.Path & "\tmp.bat" For Output As #6
+                            Print #6, """" & App.Path & "\junction.exe" & """" & " " & """" & FakeWoWPath & """" & " " & """" & WoWPath & """"
+                            Print #6, Left(FakeWoWPath, 2)
+                            Print #6, "cd " & """" & FakeWoWPath & """"
+                            Print #6, "start /WAIT WoW.exe"
+                            Print #6, "regedit /S " & """" & App.Path & "\tmp.reg" & """"
+                            Print #6, "del " & """" & App.Path & "\tmp.reg" & """"
+                            Print #6, """" & App.Path & "\junction.exe" & """" & " -d " & """" & FakeWoWPath & """"
+                            Print #6, "del " & """" & App.Path & "\tmp.bat" & """"
+                        Close #6
+                        Open App.Path & "\tmp.reg" For Output As #7
+                            Print #7, "Windows Registry Editor Version 5.00" & vbCrLf & "[HKEY_LOCAL_MACHINE\SOFTWARE\Blizzard Entertainment\World of Warcraft]" & vbCrLf & Replace("""" & "InstallPath" & """" & "=" & """" & WoWPath & "\" & """", "\", "\\")
+                        Close #7
+                        Shell App.Path & "\tmp.bat", vbHide
+                    Else
+                        Err.Raise 53
+                    End If
+                End If
+            Else ' No XFire Support, Use Classic Launch Method
+                If optLauncher.Value = True Then
+                    Shell WoWPath & "\Launcher.exe", vbNormalFocus
+                Else
+                    Shell WoWPath & "\WoW.exe", vbNormalFocus
+                End If
             End If
     End If
     
