@@ -1,0 +1,4 @@
+HubAuth=0001
+StateReport=0101
+SendUser=0002
+CloseUser=1002
