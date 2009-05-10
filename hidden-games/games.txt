@@ -10,3 +10,4 @@ NetMeeting - Not in a Call
 Automatic Updates
 Hoffmeister - Chat Window
 ^ConTEXT
+Internet Download Manager 5.17

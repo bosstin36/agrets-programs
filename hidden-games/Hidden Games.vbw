@@ -1,1 +1,6 @@
-frmMain = 44, 44, 578, 492, , 144, 72, 678, 520, C
+frmMain = 44, 44, 578, 492, Z, 144, 72, 678, 520, C
+VBHotKey = 0, 0, 0, 0, C, 0, 0, 0, 0, C
+ApiHotkey = 0, 0, 0, 0, C
+ApiSubclassedWindow = 0, 0, 0, 0, C
+HotkeySubclass = 0, 0, 0, 0, C
+frmAltTab = 0, 0, 0, 0, C, 75, 75, 1168, 692, C

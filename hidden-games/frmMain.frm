@@ -24,14 +24,14 @@ Begin VB.Form frmMain
       Top             =   1200
       _ExtentX        =   1296
       _ExtentY        =   1296
-      VKey            =   80
+      VKey            =   79
    End
    Begin Notepad.VBHotKey VBHotKey1 
       Left            =   720
       Top             =   1200
       _ExtentX        =   1296
       _ExtentY        =   1296
-      VKey            =   79
+      VKey            =   73
    End
    Begin VB.CommandButton cmdHide 
       Caption         =   "Hide"
@@ -121,7 +121,6 @@ Private Const SW_SHOWNA = 8
 Private Const SW_RESTORE = 9
 Private Const SW_SHOWDEFAULT = 10
 Private Const SW_MAX = 10
-Dim AppNames(999) As String
 
 Private Sub HideGames()
     Dim i As Integer
@@ -130,12 +129,12 @@ Private Sub HideGames()
         'lstGames.ListIndex = i
         WindowHandle = 0
         'WindowHandle = FindWindow(vbNullString, lstGames.Text)
-        If Left(AppNames(i), 1) = "^" Then
+        If Left(lstGames.List(i), 1) = "^" Then
             Minimize = True
-            WindowHandle = FindWindow(vbNullString, Right(AppNames(i), Len(AppNames(i)) - 1))
+            WindowHandle = FindWindow(vbNullString, Right(lstGames.List(i), Len(lstGames.List(i)) - 1))
         Else
             Minimize = False
-            WindowHandle = FindWindow(vbNullString, AppNames(i))
+            WindowHandle = FindWindow(vbNullString, lstGames.List(i))
         End If
         If WindowHandle <> 0 Then
             If Minimize = True Then ShowWindow WindowHandle, SW_MINIMIZE
@@ -154,10 +153,10 @@ Private Sub ShowGames()
         'lstGames.ListIndex = i
         WindowHandle = 0
         'WindowHandle = FindWindow(vbNullString, lstGames.Text)
-        If Left(AppNames(i), 1) = "^" Then
-            WindowHandle = FindWindow(vbNullString, Right(AppNames(i), Len(AppNames(i)) - 1))
+        If Left(lstGames.List(i), 1) = "^" Then
+            WindowHandle = FindWindow(vbNullString, Right(lstGames.List(i), Len(lstGames.List(i)) - 1))
         Else
-            WindowHandle = FindWindow(vbNullString, AppNames(i))
+            WindowHandle = FindWindow(vbNullString, lstGames.List(i))
         End If
         If WindowHandle <> 0 Then
             ShowWindow WindowHandle, SW_SHOW
@@ -169,20 +168,12 @@ Private Sub cmdHide_Click()
     Me.Hide
 End Sub
 
-Private Function ReloadAppNames()
-    For i = 0 To lstGames.ListCount - 1
-        lstGames.ListIndex = i
-        AppNames(i) = lstGames.Text
-    Next i
-End Function
-
 Private Sub cmdAdd_Click()
     Dim TempTitle As String
     TempTitle = InputBox("Game Title?", "Enter Game Title")
     If Len(TempTitle) > 2 Then
         lstGames.AddItem TempTitle
     End If
-    ReloadAppNames
 End Sub
 
 Private Sub cmdEdit_Click()
@@ -190,12 +181,10 @@ Private Sub cmdEdit_Click()
     TempGame = lstGames.Text
     lstGames.RemoveItem lstGames.ListIndex
     lstGames.AddItem InputBox("Edit Game", "Edit Game", TempGame)
-    ReloadAppNames
 End Sub
 
 Private Sub cmdRemove_Click()
     lstGames.RemoveItem lstGames.ListIndex
-    ReloadAppNames
 End Sub
 
 Private Sub Form_Unload(Cancel As Integer)
@@ -206,7 +195,7 @@ Private Sub Form_Load()
     If App.PrevInstance = True Then
         MsgBox "Already Running." & vbNewLine & "Press Windows Key + K to show.", , "Already Running."
     End If
-    lblAbout.Caption = "Press Windows key && a button:" & vbNewLine & "O - Hide | P - Show | K - Show Me"
+    lblAbout.Caption = "Press Windows key && a button:" & vbNewLine & "i - Hide | o - Show | k - Show Me"
     LoadList App.Path & "\games.txt", lstGames
 End Sub
 
@@ -219,7 +208,6 @@ Private Sub LoadList(sLocation As String, lstListBox As ListBox)
     i = 0
     Do Until EOF(1)
     Line Input #1, sCurrent
-    AppNames(i) = sCurrent
     lstListBox.AddItem sCurrent, i
     i = i + 1
     Loop
