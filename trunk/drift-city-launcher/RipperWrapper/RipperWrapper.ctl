@@ -1,0 +1,531 @@
+VERSION 5.00
+Object = "{248DD890-BB45-11CF-9ABC-0080C7E7B78D}#1.0#0"; "MSWinSck.ocx"
+Begin VB.UserControl RipperWrapper 
+   BackColor       =   &H00FFFFFF&
+   CanGetFocus     =   0   'False
+   ClientHeight    =   1755
+   ClientLeft      =   0
+   ClientTop       =   0
+   ClientWidth     =   2295
+   EditAtDesignTime=   -1  'True
+   HasDC           =   0   'False
+   InvisibleAtRuntime=   -1  'True
+   ScaleHeight     =   1755
+   ScaleWidth      =   2295
+   Begin MSWinsockLib.Winsock wsa 
+      Left            =   720
+      Top             =   600
+      _ExtentX        =   741
+      _ExtentY        =   741
+      _Version        =   393216
+   End
+   Begin VB.Image imgBack 
+      Height          =   480
+      Left            =   0
+      Picture         =   "RipperWrapper.ctx":0000
+      Top             =   0
+      Width           =   480
+   End
+End
+Attribute VB_Name = "RipperWrapper"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = True
+Attribute VB_PredeclaredId = False
+Attribute VB_Exposed = False
+Option Explicit
+'API Declarations
+Private Declare Function LoadLibrary Lib "kernel32" Alias "LoadLibraryA" (ByVal lpLibFileName As String) As Long
+Private Declare Function FreeLibrary Lib "kernel32" (ByVal hLibModule As Long) As Long
+Private Declare Function timeGetTime Lib "winmm.dll" () As Long
+'Default Property Values:
+Const m_def_LastPage = ""
+Const m_def_Cookies = ""
+Const m_def_ProxyPort = ""
+Const m_def_ProxyHost = ""
+Const m_def_GZip = True
+
+'Property Values
+Dim m_LastPage As String
+Dim m_Cookies As String
+Dim m_ProxyPort As String
+Dim m_ProxyHost As String
+Dim m_GZip As Boolean
+
+'Other Declarations
+Dim OBJDos As DOS_Pipe
+Dim strCookieBuffer() As typeCookieStore
+Dim lnCookieCount As Long
+Private m_hMod As Long
+Private strBuffer As String
+Private blnStopWrapper As Boolean
+Public Browser As String
+Private UseProxy As Boolean
+Private Type typeCookieStore
+    CookieIdentifier As String
+    CookieValue As String
+End Type
+'Property Subs
+Public Property Get GZip() As Boolean
+    GZip = m_GZip
+End Property
+Public Property Let GZip(ByVal New_GZip As Boolean)
+    m_GZip = New_GZip
+    PropertyChanged "GZip"
+End Property
+Public Property Get LastPage() As String
+    LastPage = m_LastPage
+End Property
+Public Property Let LastPage(ByVal New_LastPage As String)
+    m_LastPage = New_LastPage
+    PropertyChanged "LastPage"
+End Property
+Public Property Get ProxyHost() As String
+     ProxyHost = m_ProxyHost
+End Property
+Public Property Let ProxyHost(ByVal New_ProxyHost As String)
+    m_ProxyHost = New_ProxyHost
+    PropertyChanged "ProxyHost"
+End Property
+Public Property Get ProxyPort() As String
+     ProxyPort = m_ProxyPort
+End Property
+Public Property Let ProxyPort(ByVal New_ProxyPort As String)
+    m_ProxyPort = New_ProxyPort
+    PropertyChanged "ProxyPort"
+End Property
+Public Property Get Cookies() As String
+    Cookies = m_Cookies
+End Property
+Private Sub UserControl_ReadProperties(PropBag As PropertyBag)
+    m_ProxyHost = PropBag.ReadProperty("ProxyHost", m_def_ProxyHost)
+    m_ProxyPort = PropBag.ReadProperty("ProxyPort", m_def_ProxyPort)
+    m_LastPage = PropBag.ReadProperty("LastPage", m_def_LastPage)
+    m_GZip = PropBag.ReadProperty("GZip", m_def_GZip)
+End Sub
+Private Sub UserControl_WriteProperties(PropBag As PropertyBag)
+    Call PropBag.WriteProperty("ProxyHost", m_ProxyHost, m_def_ProxyHost)
+    Call PropBag.WriteProperty("ProxyPort", m_ProxyPort, m_def_ProxyPort)
+    Call PropBag.WriteProperty("LastPage", m_LastPage, m_def_LastPage)
+    Call PropBag.WriteProperty("GZip", m_GZip, m_def_GZip)
+End Sub
+Private Sub UserControl_InitProperties()
+    m_LastPage = m_def_LastPage
+    m_ProxyPort = m_def_ProxyPort
+    m_ProxyHost = m_def_ProxyHost
+    m_GZip = m_def_GZip
+End Sub
+'UserControl_ Subs
+Private Sub UserControl_Initialize()
+    Set OBJDos = New DOS_Pipe
+    lnCookieCount = -1
+    m_hMod = LoadLibrary("shell32.dll")
+End Sub
+Private Sub UserControl_Terminate()
+    Set OBJDos = Nothing
+    FreeLibrary (m_hMod)
+End Sub
+Private Sub UserControl_Resize()
+    UserControl.Width = imgBack.Width
+    UserControl.Height = imgBack.Height
+End Sub
+'Functions used by RipperWrapper
+Public Function Wait(ByVal lnMilliSeconds As Long)
+    Dim lnStart As Long, lnStop As Long
+    lnStart = timeGetTime
+    lnStop = lnStart + lnMilliSeconds
+    Do Until timeGetTime > lnStop
+        DoEvents
+    Loop
+End Function
+Private Function URLEncode(ByVal strURL As String) As String
+    Dim lnForX As Integer
+    Dim strASCII As Integer
+    Dim strCharacter As String
+    
+    URLEncode = strURL
+    
+    For lnForX = Len(URLEncode) To 1 Step -1
+        strASCII = Asc(Mid$(URLEncode, lnForX, 1))
+        Select Case strASCII
+            Case 38, 61, 63, 48 To 57, 65 To 90, 97 To 122
+
+            Case 32
+
+                Mid$(URLEncode, lnForX, 1) = "+"
+            Case Else
+                URLEncode = Left$(URLEncode, lnForX - 1) & "%" & Hex$(strASCII) & Mid$ _
+                    (URLEncode, lnForX + 1)
+        End Select
+    Next
+    
+End Function
+Private Function Hex2Dec(ByVal lnHexValue) As Currency
+
+    Dim intLow(1) As Integer, lnHigh(1) As Long, tmpVar
+    If UCase$(Left$(lnHexValue, 2)) = "&H" Then tmpVar = Mid$(lnHexValue, 3)
+    lnHexValue = Right$("0000000" & lnHexValue, 8)
+    If IsNumeric("&H" & lnHexValue) Then
+        intLow(0) = CInt("&H" & Right$(lnHexValue, 2))
+        lnHigh(0) = CLng("&H" & Mid$(lnHexValue, 5, 2))
+        intLow(1) = CInt("&H" & Mid$(lnHexValue, 3, 2))
+        lnHigh(1) = CLng("&H" & Left$(lnHexValue, 2))
+        Hex2Dec = CCur(lnHigh(1) * 256 + intLow(1)) * 65536 + (lnHigh(0) * 256) + intLow(0)
+    End If
+   
+End Function
+Private Function DecodeChunkedMessage(ByVal strBody As String) As String
+    Dim lnSize As Long, lnStart As Long, _
+        lnEnd As Long, strTemp As String
+        
+    lnStart = InStr(1, strBody, vbCrLf) - 1
+    If lnStart < 0 Then
+        DecodeChunkedMessage = strBody
+        Exit Function
+    End If
+    lnSize = Hex2Dec(Mid$(strBody, 1, lnStart))
+    lnStart = lnStart + 3
+    Do Until lnSize = 0
+        strTemp = strTemp & Mid$(strBody, lnStart, lnSize)
+        lnStart = lnStart + lnSize + 2
+        lnEnd = InStr(lnStart + 1, strBody, vbCrLf)
+        If lnEnd = 0 Then Exit Do
+        lnSize = Val("&H" & Mid$(strBody, lnStart, lnEnd - lnStart))
+        lnStart = lnEnd + 2
+    Loop
+    DecodeChunkedMessage = strTemp
+
+End Function
+Private Function ParseCookies(ByVal strHeaders As String, strOldCookies As String) As String
+    
+    Dim lnTemp(1) As Long, strKey As String, strValue As String, strTempHeaders As String, strTemp As String
+    strOldCookies = "; " & strOldCookies
+    Do Until InStrB(1, strHeaders, "Set-Cookie", vbTextCompare) = 0
+        
+        lnTemp(0) = InStr(1, strHeaders, "Set-Cookie: ") + Len("Set-Cookie: ")
+        lnTemp(1) = InStr(lnTemp(0), strHeaders, "=")
+        strKey = Mid$(strHeaders, lnTemp(0), lnTemp(1) - lnTemp(0))
+        
+        lnTemp(0) = InStr(1, strHeaders, "Set-Cookie: " & strKey & "=") + Len("Set-Cookie: " & strKey & "=")
+        lnTemp(1) = InStr(lnTemp(0), strHeaders, ";")
+        strValue = Mid$(strHeaders, lnTemp(0), lnTemp(1) - lnTemp(0))
+        strHeaders = Mid$(strHeaders, lnTemp(1) + Len(strValue))
+        
+        If InStrB(1, strOldCookies, "; " & strKey & "=", vbTextCompare) <> 0 Then
+            lnTemp(0) = InStr(1, strOldCookies, "; " & strKey & "=") + Len("; " & strKey & "=")
+            lnTemp(1) = InStr(lnTemp(0), strOldCookies, ";")
+            strTemp = Mid$(strOldCookies, lnTemp(0), lnTemp(1) - lnTemp(0))
+            strOldCookies = Replace(strOldCookies, strKey & "=" & strTemp & ";", strKey & "=" & strValue & ";")
+        Else
+            strOldCookies = strOldCookies & strKey & "=" & strValue & "; "
+        End If
+    Loop
+    
+    ParseCookies = Mid$(strOldCookies, 3)
+    
+End Function
+Public Function SortHeaders(strMethod As String, Browser As String, URL As String, referer As String) As String
+    Dim Host As String, postData As String, lnStart As Long
+    'Separate post data if method is post
+
+    If strMethod = "POST" Then
+        If InStrB(1, URL, "?") <> 0 Then
+            postData = Mid(URL, InStr(1, URL, "?") + 1)
+            URL = Mid$(URL, 1, InStr(1, URL, "?") - 1)
+        Else
+            postData = ""
+        End If
+    End If
+    
+    'Remove the http://
+    If InStrB(1, URL, "http://") <> 0 Then Host = Mid$(URL, 8)
+    'remove the URI so we are only left with the actual host
+    If InStrB(1, Host, "/") <> 0 Then Host = Mid$(Host, 1, InStr(1, Host, "/") - 1)
+    If InStrB(1, Host, "?") <> 0 Then Host = Mid$(Host, 1, InStr(1, Host, "?") - 1)
+    If Mid$(Host, 1, 4) = "www." Then Host = Mid$(Host, 5)
+    Select Case Browser
+    Case "Internet Explorer"
+        If strMethod = "POST" Then
+            SortHeaders = strMethod & " " & URL & " HTTP/1.0" & vbCrLf _
+            & "Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, application/vnd.ms-excel, application/vnd.ms-powerpoint, application/msword, */*" & vbCrLf _
+            & "Referer: " & referer & vbCrLf _
+            & "Accept-Language: en-gb" & vbCrLf _
+            & "Accept-Encoding: gzip, deflate" & vbCrLf _
+            & "Content-Type: application/x-www-form-urlencoded" & vbCrLf _
+            & "User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.1.4322)" & vbCrLf _
+            & "Keep-Alive: 300" & vbCrLf _
+            & "Host: " & Host & vbCrLf _
+            & "Content-Length: " & Len(postData) & vbCrLf _
+            & "Pragma: no-cache" & vbCrLf _
+            & "Cookie: " & m_Cookies & vbCrLf _
+            & "Connection: keep-alive" & vbCrLf & vbCrLf _
+            & postData & vbCrLf
+
+        Else
+
+            SortHeaders = strMethod & " " & URL & " HTTP/1.0" & vbCrLf _
+            & "Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, application/vnd.ms-excel, application/vnd.ms-powerpoint, application/msword, */*" & vbCrLf _
+            & "Referer: " & referer & vbCrLf _
+            & "Accept-Language: en-gb" & vbCrLf _
+            & "Accept-Encoding: gzip, deflate" & vbCrLf _
+            & "User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.1.4322)" & vbCrLf _
+            & "Keep-Alive: 300" & vbCrLf _
+            & "Host: " & Host & vbCrLf _
+            & "Cookie: " & m_Cookies & vbCrLf _
+            & "Connection: keep-alive" & vbCrLf & vbCrLf
+        End If
+    Case "Opera"
+        If strMethod = "POST" Then
+            SortHeaders = strMethod & " " & URL & " HTTP/1.0" & vbCrLf _
+            & "User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; en) Opera 8.01" & vbCrLf _
+            & "Host: " & Host & vbCrLf _
+            & "Accept: text/html, application/xml;q=0.9, application/xhtml+xml, image/png, image/jpeg, image/gif, image/x-xbitmap, */*;q=0.1" & vbCrLf _
+            & "Accept-Language: en" & vbCrLf _
+            & "Accept-Charset: windows-1252, utf-8, utf-16, iso-8859-1;q=0.6, *;q=0.1" & vbCrLf _
+            & "Accept-Encoding: gzip, deflate" & vbCrLf _
+            & "Referer: " & referer & vbCrLf _
+            & "Cookie: " & m_Cookies & vbCrLf _
+            & "Cookie2: $Version=1" & vbCrLf _
+            & "Content-Type: application/x-www-form-urlencoded" & vbCrLf _
+            & "Content-Length: " & Len(postData) & vbCrLf _
+            & "Connection: keep-alive" & vbCrLf & vbCrLf _
+            & postData & vbCrLf
+            
+        Else
+            SortHeaders = strMethod & " " & URL & " HTTP/1.0" & vbCrLf _
+            & "User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; en) Opera 8.01" & vbCrLf _
+            & "Host: " & Host & vbCrLf _
+            & "Accept: text/html, application/xml;q=0.9, application/xhtml+xml, image/png, image/jpeg, image/gif, image/x-xbitmap, */*;q=0.1" & vbCrLf _
+            & "Accept-Language: en" & vbCrLf _
+            & "Accept-Charset: windows-1252, utf-8, utf-16, iso-8859-1;q=0.6, *;q=0.1" & vbCrLf _
+            & "Accept-Encoding: gzip, deflate" & vbCrLf _
+            & "Referer: " & referer & vbCrLf _
+            & "Cookie: " & m_Cookies & vbCrLf _
+            & "Cookie2: $Version=1" & vbCrLf _
+            & "Connection: keep-alive" & vbCrLf & vbCrLf
+
+        End If
+    Case "Firefox"
+        If strMethod = "POST" Then
+            SortHeaders = strMethod & " " & URL & " HTTP/1.1" & vbCrLf _
+            & "Host: " & Host & vbCrLf _
+            & "User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.7.7) Gecko/20050414 Firefox/1.0.3" & vbCrLf _
+            & "Accept: text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5" & vbCrLf _
+            & "Accept-Language: en-us,en;q=0.5" & vbCrLf _
+            & "Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7" & vbCrLf _
+            & "Accept-Encoding: gzip, deflate" & vbCrLf _
+            & "Referer: " & referer & vbCrLf _
+            & "Cookie: " & m_Cookies & vbCrLf _
+            & "Content-Type: application/x-www-form-urlencoded" & vbCrLf _
+            & "Content-Length: " & Len(postData) & vbCrLf _
+            & "Connection: close" & vbCrLf & vbCrLf _
+            & postData & vbCrLf
+        Else
+            SortHeaders = strMethod & " " & URL & " HTTP/1.1" & vbCrLf _
+            & "Host: " & Host & vbCrLf _
+            & "User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.7.7) Gecko/20050414 Firefox/1.0.3" & vbCrLf _
+            & "Accept: text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5" & vbCrLf _
+            & "Accept-Language: en-us,en;q=0.5" & vbCrLf _
+            & "Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7" & vbCrLf _
+            & "Accept-Encoding: gzip, deflate" & vbCrLf _
+            & "Referer: " & referer & vbCrLf _
+            & "Cookie: " & m_Cookies & vbCrLf _
+            & "Connection: close" & vbCrLf & vbCrLf
+
+        End If
+    End Select
+    'If GZip is not being used remove the GZIP header
+    If Not m_GZip Then SortHeaders = Replace(SortHeaders, "Accept-Encoding: gzip, deflate" & vbCrLf, "")
+End Function
+Private Function Decompress(strHTML As String) As String
+    Dim Filenum As Integer, strcommand As String
+    Filenum = FreeFile
+    If CheckForFile(App.Path & "\Compressed.gz") = True Then Kill App.Path & "\Compressed.gz"
+    Open App.Path & "\Compressed.gz" For Binary As Filenum
+        Put #Filenum, , strHTML
+    Close Filenum
+    strcommand = Chr(34) & App.Path & "\GZip.exe" & Chr(34) & " -dfqc " & Chr(34) & App.Path & "\Compressed.gz" & Chr(34)
+    OBJDos.CommandLine = strcommand
+    Decompress = OBJDos.ExecuteCommand
+    Kill App.Path & "\Compressed.gz"
+End Function
+Private Function CheckForFile(FileName) As Boolean
+    CheckForFile = (Dir(FileName) <> "")
+End Function
+'Winsock Subs
+Private Sub wsa_Close()
+    wsa.Close
+End Sub
+Private Sub wsa_Connect()
+    strBuffer = ""
+End Sub
+Private Sub wsa_DataArrival(ByVal bytesTotal As Long)
+    Dim strData As String
+    'If the user has stopped the wrapper then close the socket and exit the sub
+    If blnStopWrapper = True Then
+        wsa.Close
+        Exit Sub
+    End If
+    'Get the new data chunk
+    wsa.GetData strData, vbString
+    
+    'Append it to buffer
+    strBuffer = strBuffer & strData
+
+End Sub
+'Cookie Save/Load
+Public Sub LoadCookies(strIdentifier As String)
+    Dim lnForX As Long
+    For lnForX = 0 To lnCookieCount 'cycle through the array
+        If LCase(strCookieBuffer(lnForX).CookieIdentifier) = LCase(strIdentifier) Then 'the identifier was the same as the key, so we found the cookie
+            m_Cookies = strCookieBuffer(lnForX).CookieValue 'set the cookie var as the one in the storage buffer
+            Exit Sub 'if it found the cookie, exit sub so we dont waste time
+        End If
+    Next lnForX
+End Sub
+Public Sub SaveCookies(strIdentifier As String)
+    Dim lnForX As Long
+    If lnCookieCount = -1 Then GoTo RedimBuffer 'theres nothing in it, so we dont need to cycle through it
+    For lnForX = 0 To lnCookieCount
+        If LCase(strCookieBuffer(lnForX).CookieIdentifier) = LCase(strIdentifier) Then
+            strCookieBuffer(lnForX).CookieValue = m_Cookies
+            Exit Sub
+        End If
+    Next lnForX
+RedimBuffer:
+    'Add one to the cookie count
+    lnCookieCount = lnCookieCount + 1
+    'redimension array
+    ReDim Preserve strCookieBuffer(lnCookieCount)
+    strCookieBuffer(lnCookieCount).CookieIdentifier = strIdentifier
+    strCookieBuffer(lnCookieCount).CookieValue = m_Cookies
+End Sub
+'User Subs/Functions
+Public Function GetHeaderFieldValue(ByVal strHeaders As String, ByVal strHeader As String) As String
+    Dim lnStart As Long, lnEnd As Long
+    If InStrB(1, strHeaders, strHeader, vbTextCompare) <> 0 Then
+        lnStart = InStr(1, strHeaders, strHeader, vbTextCompare) + Len(strHeader) + 2
+        GetHeaderFieldValue = Mid$(strHeaders, lnStart, InStr(lnStart, strHeaders, vbNewLine, vbTextCompare) - lnStart)
+    Else
+        GetHeaderFieldValue = vbNullString
+    End If
+End Function
+Public Sub SetProxy(strHost As String, strPort As Long)
+    UseProxy = True
+    m_ProxyHost = strHost
+    m_ProxyPort = strPort
+End Sub
+Public Sub NoProxy()
+    UseProxy = False
+End Sub
+Public Sub ClearCookies()
+    m_Cookies = ""
+End Sub
+Public Sub StopWrapper()
+    blnStopWrapper = True
+End Sub
+Public Sub IdentifyAs(ByVal BrowserName As String)
+    Browser = BrowserName
+End Sub
+Public Function StripHeaders(strHTML As String) As String
+    Dim strParts() As String
+    'Split at the two line break
+    strParts = Split(strHTML, vbCrLf & vbCrLf, 2)
+    StripHeaders = strParts(1) 'return the body
+End Function
+Public Function GetStringBetween(strInput As String, strStart As String, _
+    strEnd As String, Optional lnStart As Long = 1)
+    'Dim lnStart as
+End Function
+Public Function DownloadFile(URL As String, Path As String)
+    Dim Filenum As Integer, strHTML As String
+    If CheckForFile(Path) = True Then
+        Kill Path
+    End If
+    Filenum = FreeFile
+    strHTML = StripHeaders(Request("GET", URL, LastPage))
+    Open Path For Output As Filenum
+        Print #Filenum, strHTML
+    Close Filenum
+End Function
+Public Function NeoLogin(ByVal Username As String, ByVal Password As String) As String
+    Dim strHTML As String
+    strHTML = Request("POST", "http://www.neopets.com/login.phtml?username=" & Username & "&password=" & Password & "&destination=/petcentral.phtml", "http://www.neopets.com/hi.phtml")
+    If InStrB(1, strHTML, "Location: pet", vbTextCompare) <> 0 Then
+       NeoLogin = "Logged in."
+    ElseIf InStrB(1, strHTML, "too many times", vbTextCompare) <> 0 Then
+       NeoLogin = "Too Many Login Attempts"
+    ElseIf InStrB(1, strHTML, "badpassword", vbTextCompare) <> 0 Then
+       NeoLogin = "Bad Password"
+    ElseIf InStrB(1, strHTML, "frozen", vbTextCompare) <> 0 Then
+       NeoLogin = "Account Frozen"
+    End If
+End Function
+Public Function Request(strMethod As String, URL As String, Optional referer As String)
+    
+    On Error GoTo RequestSub
+    If IsMissing(referer) Then referer = LastPage 'if theres no referer make it be the lastpage
+    Dim Host As String, lnStart As Long, lnEnd As Long, RequestHeaders As String
+    blnStopWrapper = False 'set the stopwrapper to false
+    If Browser = "" Then Browser = "Firefox" 'if the user has no specified a browser, assume firefox
+    'Manipulate the URL to get the host out of it.
+    'We need the host to connect the winsock
+    If InStrB(1, URL, "http://") <> 0 Then Host = Mid$(URL, 8)
+    If InStrB(1, Host, "/") <> 0 Then Host = Mid$(Host, 1, InStr(1, Host, "/") - 1)
+    If InStrB(1, Host, "?") <> 0 Then Host = Mid$(Host, 1, InStr(1, Host, "?") - 1)
+    'Set our headers
+    RequestHeaders = SortHeaders(strMethod, Browser, URL, referer)
+
+    'if the winsock is busy, close it so we're ready for our next request
+    Do Until wsa.State = 0
+        DoEvents
+    Loop
+    'empty the buffer
+    strBuffer = ""
+
+    'Connect to the host
+    If UseProxy = False Then
+        wsa.Connect Host, 80
+    Else
+        wsa.Connect m_ProxyHost, m_ProxyPort
+    End If
+    'Loop through until we're connected, so we can send the data
+    Dim lnTimer As Long
+    lnTimer = Int(Timer)
+    If lnTimer > 86397 Then
+        lnTimer = lnTimer - 86400
+    End If
+    Do Until wsa.State = 7 Or blnStopWrapper = True Or lnTimer >= (Timer + 3)
+        DoEvents
+    Loop
+    
+    'Send the data to the host
+    If blnStopWrapper Then Exit Function
+    wsa.SendData RequestHeaders
+    'Wait 'til the winsock is closed
+    If blnStopWrapper Then Exit Function
+    Do Until wsa.State = 0 Or blnStopWrapper = True
+        DoEvents
+    Loop
+    'Set the lastpage var
+    LastPage = URL
+    'Separate body and header for dechunking and cookie stuffage
+    If blnStopWrapper Then Exit Function
+    If strBuffer = Empty Then
+        GoTo RequestSub
+    End If
+    Dim strParts() As String
+    strParts = Split(strBuffer, vbCrLf & vbCrLf)
+    m_Cookies = ParseCookies(strParts(0), m_Cookies)
+    If blnStopWrapper Then Exit Function
+    If GetHeaderFieldValue(strParts(0), "Transfer-Encoding") = "chunked" Then
+        strParts(1) = DecodeChunkedMessage(strParts(1))
+    End If
+    If blnStopWrapper Then Exit Function
+    If GetHeaderFieldValue(strParts(0), "Content-Encoding") = "gzip" Then
+        strParts(1) = Decompress(strParts(1))
+    End If
+    Request = strParts(0) & vbNewLine & vbNewLine & strParts(1)
+    Exit Function
+RequestSub:
+    Request = Request(strMethod, URL, referer)
+End Function
