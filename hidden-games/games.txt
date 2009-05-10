@@ -1,0 +1,12 @@
+Solitaire
+Minesweeper
+Quake II
+Counter-Strike 2D - a 0.0.3.3
+Liero Xtreme
+Soldat
+Quake 3: Arena
+NetMeeting - In a call
+NetMeeting - Not in a Call
+Automatic Updates
+Hoffmeister - Chat Window
+^ConTEXT
