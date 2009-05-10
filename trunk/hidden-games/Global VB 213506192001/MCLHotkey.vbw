@@ -1,0 +1,4 @@
+VBHotKey = 176, 176, 608, 623, Z, 220, 220, 652, 667, C
+ApiHotkey = 198, 198, 630, 645, 
+HotkeySubclass = 0, 0, 432, 447, C
+ApiSubclassedWindow = 110, 110, 542, 557, C
