@@ -69,7 +69,7 @@ Begin VB.Form frmMain
       NoFolders       =   0   'False
       Transparent     =   0   'False
       ViewID          =   "{0057D0E0-3573-11CF-AE69-08002B2E1262}"
-      Location        =   "http:///"
+      Location        =   ""
    End
    Begin VB.Label lblPass 
       BackStyle       =   0  'Transparent
@@ -125,7 +125,11 @@ Private Sub cmdLogin_Click()
 End Sub
 
 Private Function DoLogin()
-    WebBrowser1.Navigate "http://login.ijji.com/login.nhn?m=login&nextURL=http://lunia.ijji.com/common/launch.nhn?gameId=u_lunia&memberid=" & LuniaUser & "&password=" & LuniaPass & "&secure=false"
+    ' Old method doesn't work
+    'WebBrowser1.Navigate "http://login.ijji.com/login.nhn?m=login&nextURL=http://lunia.ijji.com/common/launch.nhn?gameId=u_lunia&memberid=" & LuniaUser & "&password=" & LuniaPass & "&secure=false"
+    
+    ' New method :D
+    WebBrowser1.Navigate "http://login.ijji.com/login.nhn?m=login&nextURL=http://lunia.ijji.com/common/prelaunch.nhn?gameId=u_lunia&subId=&posx=555&posy=562&_lang=en}&memberid=" & LuniaUser & "&password=" & LuniaPass & "&secure=false"
 End Function
 
 Private Sub txtPass_KeyPress(KeyAscii As Integer)
@@ -163,8 +167,15 @@ Private Sub Form_Load()
 End Sub
 
 Private Sub WebBrowser1_NavigateComplete2(ByVal pDisp As Object, URL As Variant)
-    If URL = "http://drift.ijji.com/common/launch.nhn?gameId=u_lunia" Then
-        ShellExecute hwnd, "open", GetBetween(ShowHtmlTextFromUrl(WebBrowser1), "launchScript" & """" & ":" & """", """" & ","), vbNullString, vbNullString, 1
+    ' Seems this method doesn't work anymore
+    'If URL = "http://lunia.ijji.com/common/launch.nhn?gameId=u_lunia" Then
+        'ShellExecute hwnd, "open", GetBetween(ShowHtmlTextFromUrl(WebBrowser1), "launchScript"":""", """"), vbNullString, vbNullString, 1
+        'MsgBox GetBetween(ShowHtmlTextFromUrl(WebBrowser1), "launchScript"":""", """")
+        'End
+    'End If
+    
+    ' New method :D
+    If InStr(URL, "http://wbers.ijji.com/wbers/post.php") > 0 Then
         End
     End If
 End Sub
