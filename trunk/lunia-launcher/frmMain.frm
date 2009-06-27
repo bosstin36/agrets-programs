@@ -69,7 +69,7 @@ Begin VB.Form frmMain
       NoFolders       =   0   'False
       Transparent     =   0   'False
       ViewID          =   "{0057D0E0-3573-11CF-AE69-08002B2E1262}"
-      Location        =   ""
+      Location        =   "http:///"
    End
    Begin VB.Label lblPass 
       BackStyle       =   0  'Transparent
@@ -156,6 +156,7 @@ Private Sub Form_Load()
         If LuniaUser <> "" And LuniaPass <> "" Or Command = "Login" Or Command = "DoLogin" Then
             If Command <> "Login" And Command <> "DoLogin" Then
                 Me.Hide
+                frmSplash.Show
             Else
                 LuniaUser = GetSetting("LuniaLauncher", "LoginInfo", "User")
                 LuniaPass = GetSetting("LuniaLauncher", "LoginInfo", "Pass")
