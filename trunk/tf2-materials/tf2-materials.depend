@@ -1,0 +1,13 @@
+# depslib dependency file v1.0
+1275473656 source:c:\programming\agrets-programs\tf2-materials\main.cpp
+	<iostream>
+	<fstream>
+	<string>
+	<tchar.h>
+	<stdio.h>
+	<time.h>
+	<ctime>
+	<cstdlib>
+	<sstream>
+	<vector>
+
